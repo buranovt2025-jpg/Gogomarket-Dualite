@@ -18,6 +18,7 @@ export default {
     sales_management: 'Управление продажами',
     add_product: 'Добавить товар',
     my_products: 'Мои товары',
+    incoming_orders: 'Входящие заказы',
     become_business: 'Стать Бизнесом',
     remove_limits: 'Снять лимиты и получить галочку',
     store_panel: 'Панель магазина',
@@ -26,11 +27,5 @@ export default {
     favorites: 'Избранное',
     language: 'Язык / Til',
     logout: 'Выйти из аккаунта',
-    success: 'Успешно!',
-    congrats_seller: 'Поздравляем! Теперь вы Частный продавец.',
-    agree: 'Согласен',
-    cancel: 'Отмена',
-    become_seller_title: 'Стать продавцом',
-    become_seller_desc: 'Вы соглашаетесь с правилами платформы и переходите на Уровень 2. Вы сможете публиковать до 10 товаров в неделю абсолютно бесплатно.',
   }
 };

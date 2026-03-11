@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, SafeAreaView, ScrollView, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Image as ImageIcon, Package } from 'lucide-react-native';
+import { ArrowLeft, Image as ImageIcon, Video as VideoIcon, Package } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Video, ResizeMode } from 'expo-av';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
@@ -11,7 +12,8 @@ export default function AddStoryScreen() {
   const router = useRouter();
   const { user } = useAuth();
   
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [mediaUri, setMediaUri] = useState<string | null>(null);
+  const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -31,23 +33,29 @@ export default function AddStoryScreen() {
     }
   }, [user]);
 
-  const pickImage = async () => {
+  const pickMedia = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.All, // Разрешаем и фото, и видео
       allowsEditing: true,
       aspect: [9, 16],
       quality: 0.8,
     });
 
     if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
+      setMediaUri(result.assets[0].uri);
+      setMediaType(result.assets[0].type === 'video' ? 'video' : 'image');
     }
   };
 
-  const uploadImageToSupabase = async (uri: string) => {
+  const uploadMediaToSupabase = async (uri: string) => {
     const response = await fetch(uri);
     const blob = await response.blob();
-    const fileExt = uri.split('.').pop() || 'jpg';
+    
+    let fileExt = uri.split('.').pop()?.toLowerCase();
+    if (!fileExt || fileExt.length > 4) {
+      fileExt = mediaType === 'video' ? 'mp4' : 'jpg';
+    }
+    
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
     const filePath = `stories/${user?.id}/${fileName}`;
 
@@ -59,25 +67,25 @@ export default function AddStoryScreen() {
   };
 
   const handlePublish = async () => {
-    if (!imageUri || !title) {
-      Alert.alert('Ошибка', 'Пожалуйста, выберите фото и добавьте текст.');
+    if (!mediaUri || !title) {
+      Alert.alert('Ошибка', 'Пожалуйста, выберите медиафайл и добавьте текст.');
       return;
     }
     if (!user) return;
 
     setLoading(true);
     try {
-      const publicUrl = await uploadImageToSupabase(imageUri);
+      const publicUrl = await uploadMediaToSupabase(mediaUri);
 
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24);
 
       const { error } = await supabase.from('stories').insert({
         seller_id: user.id,
-        image_url: publicUrl,
+        image_url: publicUrl, // Используем то же поле для хранения ссылки на медиа
         title: title.trim(),
         expires_at: expiresAt.toISOString(),
-        product_id: selectedProductId // Привязываем товар
+        product_id: selectedProductId
       });
 
       if (error) throw error;
@@ -107,13 +115,27 @@ export default function AddStoryScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           
-          <TouchableOpacity style={styles.imageUploadBlock} onPress={pickImage}>
-            {imageUri ? (
-              <Image source={{ uri: imageUri }} style={styles.previewImage} />
+          <TouchableOpacity style={styles.imageUploadBlock} onPress={pickMedia}>
+            {mediaUri ? (
+              mediaType === 'video' ? (
+                <Video
+                  source={{ uri: mediaUri }}
+                  style={styles.previewImage}
+                  resizeMode={ResizeMode.COVER}
+                  shouldPlay
+                  isLooping
+                  isMuted
+                />
+              ) : (
+                <Image source={{ uri: mediaUri }} style={styles.previewImage} />
+              )
             ) : (
               <>
-                <ImageIcon size={48} color="#AF52DE" />
-                <Text style={styles.imageUploadText}>Выбрать фото из галереи</Text>
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <ImageIcon size={40} color="#AF52DE" />
+                  <VideoIcon size={40} color="#AF52DE" />
+                </View>
+                <Text style={styles.imageUploadText}>Выбрать фото или видео</Text>
                 <Text style={styles.imageUploadSubtext}>Формат 9:16</Text>
               </>
             )}
@@ -172,7 +194,7 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingHorizontal: 16 },
   imageUploadBlock: { height: 400, backgroundColor: '#F5F0FF', borderWidth: 1, borderColor: '#E9D6FF', borderStyle: 'dashed', borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 20, marginBottom: 24, overflow: 'hidden' },
   previewImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  imageUploadText: { fontSize: 16, fontWeight: '600', color: '#AF52DE', marginTop: 12 },
+  imageUploadText: { fontSize: 16, fontWeight: '600', color: '#AF52DE', marginTop: 16 },
   imageUploadSubtext: { fontSize: 14, color: '#8E8E93', marginTop: 4 },
   form: { gap: 16 },
   label: { fontSize: 14, fontWeight: '600', color: '#1C1C1E', marginBottom: -8 },

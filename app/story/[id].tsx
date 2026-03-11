@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Animated, SafeAreaView, StatusBar, PanResponder, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { X, ChevronUp, ShoppingBag } from 'lucide-react-native';
+import { Video, ResizeMode } from 'expo-av';
 import { supabase } from '../../lib/supabase';
 
 export default function StoryScreen() {
@@ -17,7 +18,14 @@ export default function StoryScreen() {
 
   // Адаптивность
   const { width } = useWindowDimensions();
-  const contentWidth = Math.min(width, 480); // Как в Instagram Web
+  const contentWidth = Math.min(width, 480);
+
+  // Функция проверки, является ли ссылка видео
+  const isVideo = (url: string) => {
+    if (!url) return false;
+    const cleanUrl = url.split('?')[0];
+    return cleanUrl.toLowerCase().match(/\.(mp4|mov|webm|mkv)$/i) !== null;
+  };
 
   useEffect(() => {
     const fetchStories = async () => {
@@ -38,12 +46,22 @@ export default function StoryScreen() {
   }, [id]);
 
   useEffect(() => { 
-    if (!loading && stories.length > 0) startAnimation(); 
+    if (!loading && stories.length > 0) {
+      progress.stopAnimation();
+      progress.setValue(0);
+      
+      const currentStory = stories[currentIndex];
+      // Если это фото, запускаем таймер на 5 секунд. 
+      // Если видео - таймер запустится из onLoad самого компонента Video
+      if (currentStory && !isVideo(currentStory.image_url)) {
+        startAnimation(5000);
+      }
+    }
   }, [currentIndex, loading]);
 
-  const startAnimation = () => {
+  const startAnimation = (duration = 5000) => {
     progress.setValue(0);
-    Animated.timing(progress, { toValue: 1, duration: 5000, useNativeDriver: false }).start(({ finished }) => {
+    Animated.timing(progress, { toValue: 1, duration, useNativeDriver: false }).start(({ finished }) => {
       if (finished) nextStory();
     });
   };
@@ -55,7 +73,11 @@ export default function StoryScreen() {
 
   const prevStory = () => {
     if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
-    else { progress.setValue(0); startAnimation(); }
+    else { 
+      progress.setValue(0); 
+      const currentStory = stories[currentIndex];
+      if (!isVideo(currentStory?.image_url)) startAnimation(5000); 
+    }
   };
 
   const handleActionPress = () => {
@@ -83,11 +105,32 @@ export default function StoryScreen() {
   const currentStory = stories[currentIndex];
   if (!currentStory) return null;
 
+  const isCurrentVideo = isVideo(currentStory.image_url);
+
   return (
     <Animated.View style={[styles.container, { transform: [{ translateY }] }]} {...panResponder.panHandlers}>
       <StatusBar hidden />
       <View style={[styles.responsiveWrapper, { width: contentWidth }]}>
-        <Image source={{ uri: currentStory.image_url }} style={styles.image} resizeMode="cover" />
+        
+        {isCurrentVideo ? (
+          <Video
+            source={{ uri: currentStory.image_url }}
+            style={styles.image}
+            resizeMode={ResizeMode.COVER}
+            shouldPlay={true}
+            onLoad={(status: any) => {
+              // Как только видео загрузилось, узнаем его длину и запускаем полоску прогресса
+              if (status.isLoaded && status.durationMillis) {
+                startAnimation(status.durationMillis);
+              } else {
+                startAnimation(5000); // фоллбэк, если длину не удалось получить
+              }
+            }}
+          />
+        ) : (
+          <Image source={{ uri: currentStory.image_url }} style={styles.image} resizeMode="cover" />
+        )}
+
         <View style={styles.topOverlay} />
         <View style={styles.bottomOverlay} />
 

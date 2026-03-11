@@ -18,6 +18,7 @@ export default {
     sales_management: 'Sotuvlarni boshqarish',
     add_product: 'Tovar qoʻshish',
     my_products: 'Mening tovarlarim',
+    incoming_orders: 'Kiruvchi buyurtmalar',
     become_business: 'Biznesga aylanish',
     remove_limits: 'Cheklovlarni olib tashlash va belgi olish',
     store_panel: 'Doʻkon paneli',
@@ -26,11 +27,5 @@ export default {
     favorites: 'Sevimlilar',
     language: 'Til / Язык',
     logout: 'Hisobdan chiqish',
-    success: 'Muvaffaqiyatli!',
-    congrats_seller: 'Tabriklaymiz! Endi siz Sotuvchisiz.',
-    agree: 'Roziman',
-    cancel: 'Bekor qilish',
-    become_seller_title: 'Sotuvchi boʻlish',
-    become_seller_desc: 'Siz platforma qoidalariga rozi boʻlasiz va 2-darajaga oʻtasiz. Siz haftasiga 10 tagacha tovarni mutlaqo bepul joylashtirishingiz mumkin.',
   }
 };

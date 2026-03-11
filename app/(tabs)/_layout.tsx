@@ -1,12 +1,15 @@
 import { Tabs } from 'expo-router';
 import { Home, PlaySquare, Plus, MessageCircle, User } from 'lucide-react-native';
-import { View, useColorScheme } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../constants/Colors';
 import { useLanguage } from '../../context/LanguageContext';
+import { useThemeContext } from '../../context/ThemeContext';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const colors = Colors[colorScheme];
+  const { isDark } = useThemeContext();
+  const colors = Colors[isDark ? 'dark' : 'light'];
   const { t } = useLanguage();
 
   return (
@@ -15,27 +18,39 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.tint,
         tabBarInactiveTintColor: colors.tabIconDefault,
         tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
+          position: 'absolute',
+          borderTopWidth: 0,
+          elevation: 0,
+          height: Platform.OS === 'ios' ? 85 : 65,
+          backgroundColor: 'transparent',
         },
+        tabBarBackground: () => (
+          <BlurView 
+            tint={isDark ? "dark" : "light"} 
+            intensity={80} 
+            style={StyleSheet.absoluteFill} 
+          />
+        ),
         headerShown: false,
+        tabBarShowLabel: true,
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
+          marginBottom: Platform.OS === 'ios' ? 0 : 5,
+        }
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: t('tabs.home'),
-          tabBarIcon: ({ color }) => <Home size={24} color={color} />,
+          tabBarIcon: ({ color, focused }) => <Home size={24} color={color} strokeWidth={focused ? 2.5 : 2} />,
         }}
       />
       <Tabs.Screen
         name="reels"
         options={{
           title: t('tabs.reels'),
-          tabBarIcon: ({ color }) => <PlaySquare size={24} color={color} />,
+          tabBarIcon: ({ color, focused }) => <PlaySquare size={24} color={color} strokeWidth={focused ? 2.5 : 2} />,
         }}
       />
       <Tabs.Screen
@@ -43,21 +58,15 @@ export default function TabLayout() {
         options={{
           title: '',
           tabBarIcon: ({ focused }) => (
-            <View style={{
-              width: 48,
-              height: 48,
-              backgroundColor: '#FF5A00',
-              borderRadius: 24,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginTop: 8,
-              shadowColor: '#FF5A00',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 5,
-            }}>
-              <Plus size={28} color="#fff" />
+            <View style={styles.addButtonWrapper}>
+              <LinearGradient
+                colors={[colors.gradientStart, colors.gradientEnd]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.addButton}
+              >
+                <Plus size={28} color="#fff" strokeWidth={3} />
+              </LinearGradient>
             </View>
           ),
         }}
@@ -66,16 +75,36 @@ export default function TabLayout() {
         name="chat"
         options={{
           title: t('tabs.chat'),
-          tabBarIcon: ({ color }) => <MessageCircle size={24} color={color} />,
+          tabBarIcon: ({ color, focused }) => <MessageCircle size={24} color={color} strokeWidth={focused ? 2.5 : 2} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: t('tabs.profile'),
-          tabBarIcon: ({ color }) => <User size={24} color={color} />,
+          tabBarIcon: ({ color, focused }) => <User size={24} color={color} strokeWidth={focused ? 2.5 : 2} />,
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  addButtonWrapper: {
+    top: -10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#FF5A00',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  addButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
+});

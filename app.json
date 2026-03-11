@@ -1,22 +1,48 @@
 {
-    "expo": {
-      "name": "react-native-expo-starter",
-      "slug": "react-native-expo-starter",
-      "version": "1.0.0",
-      "orientation": "portrait",
-      "scheme": "myapp",
-      "userInterfaceStyle": "automatic",
-      "newArchEnabled": true,
-      "ios": {
-        "supportsTablet": true
-      },
-      "web": {
-        "bundler": "metro",
-        "output": "single",
-      },
-      "plugins": ["expo-router"],
-      "experiments": {
-        "typedRoutes": true
+  "expo": {
+    "name": "GogoMarket",
+    "slug": "gogomarket",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.webp",
+    "scheme": "gogomarket",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-light.webp",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "splash": {
+        "image": "./assets/images/splash-light.webp",
+        "resizeMode": "contain",
+        "backgroundColor": "#ffffff",
+        "dark": {
+          "image": "./assets/images/splash-dark.webp",
+          "backgroundColor": "#FF5A00"
+        }
       }
+    },
+    "android": {
+      "splash": {
+        "image": "./assets/images/splash-light.webp",
+        "resizeMode": "contain",
+        "backgroundColor": "#ffffff",
+        "dark": {
+          "image": "./assets/images/splash-dark.webp",
+          "backgroundColor": "#FF5A00"
+        }
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
     }
   }
+}

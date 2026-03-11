@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, SafeAreaView, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Heart } from 'lucide-react-native';
+import { ArrowLeft, Bookmark } from 'lucide-react-native';
 import { useFavorites } from '../context/FavoritesContext';
 
 const { width } = Dimensions.get('window');
@@ -33,7 +33,7 @@ export default function FavoritesScreen() {
         columnWrapperStyle={styles.row}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Heart size={64} color="#D1D1D6" />
+            <Bookmark size={64} color="#D1D1D6" />
             <Text style={styles.emptyTitle}>Нет сохраненных товаров</Text>
             <Text style={styles.emptySubtitle}>Добавляйте товары в избранное, чтобы не потерять их</Text>
           </View>
@@ -49,7 +49,7 @@ export default function FavoritesScreen() {
               style={styles.favoriteBtn}
               onPress={() => toggleFavorite(item)}
             >
-              <Heart size={20} color="#FF3B30" fill="#FF3B30" />
+              <Bookmark size={20} color="#1C1C1E" fill="#1C1C1E" />
             </TouchableOpacity>
             <View style={styles.cardContent}>
               <Text style={styles.cardPrice}>{formatPrice(item.price)}</Text>

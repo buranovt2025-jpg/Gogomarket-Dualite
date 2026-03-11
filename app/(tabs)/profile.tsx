@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Alert, ScrollView, useColorScheme } from 'react-native';
-import { User, ShieldCheck, LogOut, Package, Store, ChevronRight, List, TrendingUp, Heart, Globe, Database } from 'lucide-react-native';
+import { User, ShieldCheck, LogOut, Package, Store, ChevronRight, List, TrendingUp, Bookmark, Globe, Database } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useRouter } from 'expo-router';
@@ -33,77 +33,54 @@ export default function ProfileScreen() {
     if (!user) return;
     setSeeding(true);
     
-    const dummyProducts = [
-      {
-        seller_id: user.id,
-        title: 'Apple iPhone 15 Pro 256GB Natural Titanium',
-        description: 'Абсолютно новый, запечатанный. Гарантия 1 год от магазина. Возможна доставка.',
-        price: 13500000,
-        category: 'Электроника',
-        images: ['https://images.unsplash.com/photo-1695048133142-1a20484d2569?q=80&w=1000&auto=format&fit=crop'],
-        status: 'active'
-      },
-      {
-        seller_id: user.id,
-        title: 'Кроссовки Nike Air Force 1 White',
-        description: 'Оригинал, размер 42. Носил пару раз, состояние идеальное. Продаю, так как не подошел размер.',
-        price: 1200000,
-        category: 'Одежда',
-        images: ['https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?q=80&w=1000&auto=format&fit=crop'],
-        status: 'active'
-      },
-      {
-        seller_id: user.id,
-        title: 'MacBook Pro 14 M3 Pro 18GB/512GB',
-        description: 'Идеальное состояние, полный комплект. Батарея 100%. Использовался только дома.',
-        price: 21000000,
-        category: 'Электроника',
-        images: ['https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=1000&auto=format&fit=crop'],
-        status: 'active'
-      },
-      {
-        seller_id: user.id,
-        title: 'Стильный диван для гостиной (Велюр)',
-        description: 'Очень удобный и мягкий диван. Ткань легко чистится. Самовывоз из центра города.',
-        price: 4500000,
-        category: 'Дом и сад',
-        images: ['https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=1000&auto=format&fit=crop'],
-        status: 'active'
-      },
-      {
-        seller_id: user.id,
-        title: 'Sony PlayStation 5 (С дисководом)',
-        description: 'В комплекте 2 оригинальных джойстика DualSense и 3 игры на дисках. Не шумит, не греется.',
-        price: 6500000,
-        category: 'Электроника',
-        images: ['https://images.unsplash.com/photo-1606813907291-d86efa9b94db?q=80&w=1000&auto=format&fit=crop'],
-        status: 'active'
-      },
-      {
-        seller_id: user.id,
-        title: 'Умные часы Apple Watch Series 9 45mm',
-        description: 'Цвет Midnight. На экране защитная пленка с первого дня. Полный комплект с коробкой.',
-        price: 4800000,
-        category: 'Электроника',
-        images: ['https://images.unsplash.com/photo-1434493789847-2f02dc6ca35d?q=80&w=1000&auto=format&fit=crop'],
-        status: 'active'
+    try {
+      if (profile?.tier === 'buyer') {
+        await supabase.from('profiles').update({ tier: 'private_seller' }).eq('id', user.id);
+        await refreshProfile();
       }
-    ];
+      
+      // 1. Добавляем товары
+      const dummyProducts = [
+        { seller_id: user.id, title: 'Apple iPhone 15 Pro 256GB', description: 'Новый', price: 13500000, category: 'Электроника', images: ['https://images.unsplash.com/photo-1695048133142-1a20484d2569?q=80&w=1000&auto=format&fit=crop'], status: 'active' },
+        { seller_id: user.id, title: 'Кроссовки Nike Air Force 1', description: 'Оригинал', price: 1200000, category: 'Одежда', images: ['https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?q=80&w=1000&auto=format&fit=crop'], status: 'active' },
+      ];
+      const { data: insertedProducts } = await supabase.from('products').insert(dummyProducts).select();
 
-    const { error } = await supabase.from('products').insert(dummyProducts);
-    setSeeding(false);
+      // 2. Добавляем Рилсы
+      const dummyReels = [
+        { seller_id: user.id, video_url: 'https://images.unsplash.com/photo-1600003014755-ba31aa59c4b6?q=80&w=1000&auto=format&fit=crop', description: 'Мой новый товар! 🔥', product_id: insertedProducts?.[0]?.id },
+        { seller_id: user.id, video_url: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=1000&auto=format&fit=crop', description: 'Скидки на коллекцию 👗', product_id: insertedProducts?.[1]?.id }
+      ];
+      await supabase.from('reels').insert(dummyReels);
 
-    if (error) {
-      Alert.alert('Ошибка', error.message);
-    } else {
-      Toast.show({
-        type: 'success',
-        text1: 'Готово!',
-        text2: 'Тестовые товары успешно добавлены в базу.',
-        position: 'bottom'
-      });
+      // 3. Добавляем Истории
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+      const dummyStories = [
+        { seller_id: user.id, image_url: 'https://images.unsplash.com/photo-1523206489230-c012c64b2b48?q=80&w=1000&auto=format&fit=crop', title: 'Скидки сегодня!', expires_at: expiresAt.toISOString() }
+      ];
+      await supabase.from('stories').insert(dummyStories);
+
+      Toast.show({ type: 'success', text1: 'Готово!', text2: 'Товары, Рилсы и Истории успешно добавлены.' });
       router.push('/(tabs)/');
+    } catch (error: any) {
+      Toast.show({ type: 'error', text1: 'Ошибка', text2: error.message });
+    } finally {
+      setSeeding(false);
     }
+  };
+
+  const handleUpgradeToSeller = async () => {
+    setLoading(true);
+    const { error } = await supabase.from('profiles').update({ tier: 'private_seller' }).eq('id', user?.id);
+    
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Ошибка', text2: error.message });
+    } else {
+      await refreshProfile();
+      Toast.show({ type: 'success', text1: 'Успешно!', text2: 'Теперь вы Частный продавец (Уровень 2).' });
+    }
+    setLoading(false);
   };
 
   if (!session) {
@@ -113,58 +90,22 @@ export default function ProfileScreen() {
           <User size={64} color={colors.textSecondary} />
         </View>
         <Text style={[styles.unauthTitle, { color: colors.text }]}>{t('profile.login_prompt')}</Text>
-        <Text style={[styles.unauthSubtitle, { color: colors.textSecondary }]}>
-          {t('profile.login_subtitle')}
-        </Text>
-        <TouchableOpacity 
-          style={styles.loginButton} 
-          onPress={() => router.push('/(auth)/login')}
-        >
+        <Text style={[styles.unauthSubtitle, { color: colors.textSecondary }]}>{t('profile.login_subtitle')}</Text>
+        <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/(auth)/login')}>
           <Text style={styles.loginButtonText}>{t('profile.login_btn')}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.langToggleBtn, { borderColor: colors.border }]} onPress={toggleLanguage}>
-          <Globe size={20} color={colors.icon} />
-          <Text style={[styles.langToggleText, { color: colors.text }]}>
-            {locale === 'ru' ? 'Oʻzbek tiliga oʻtish' : 'Перейти на русский'}
-          </Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const handleUpgradeToSeller = () => {
-    Alert.alert(
-      t('profile.become_seller_title'),
-      t('profile.become_seller_desc'),
-      [
-        { text: t('profile.cancel'), style: 'cancel' },
-        {
-          text: t('profile.agree'),
-          onPress: async () => {
-            setLoading(true);
-            const { error } = await supabase.from('profiles').update({ tier: 'private_seller' }).eq('id', profile?.id);
-            if (!error) {
-              await refreshProfile();
-              Alert.alert(t('profile.success'), t('profile.congrats_seller'));
-            }
-            setLoading(false);
-          }
-        }
-      ]
-    );
-  };
-
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]} showsVerticalScrollIndicator={false}>
       <View style={[styles.header, { backgroundColor: colors.card }]}>
         <View style={styles.avatarPlaceholder}>
-          <Text style={styles.avatarText}>
-            {profile?.first_name ? profile.first_name[0].toUpperCase() : 'U'}
-          </Text>
+          <Text style={styles.avatarText}>{profile?.first_name ? profile.first_name[0].toUpperCase() : 'U'}</Text>
         </View>
         <View style={styles.userInfo}>
-          <Text style={[styles.name, { color: colors.text }]}>{profile?.first_name} {profile?.last_name}</Text>
+          <Text style={[styles.name, { color: colors.text }]}>{profile?.first_name || 'Пользователь'} {profile?.last_name}</Text>
           <View style={[styles.tierBadge, profile?.tier === 'private_seller' && styles.tierBadgeSeller, profile?.tier === 'business' && styles.tierBadgeBusiness]}>
             <Text style={[styles.tierText, profile?.tier === 'private_seller' && styles.tierTextSeller, profile?.tier === 'business' && styles.tierTextBusiness]}>
               {TIER_NAMES[profile?.tier || 'buyer']}
@@ -173,7 +114,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {profile?.tier === 'buyer' && (
+      {(!profile || profile.tier === 'buyer') && (
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <View style={styles.cardHeader}>
             <ShieldCheck size={24} color="#FF5A00" />
@@ -244,31 +185,17 @@ export default function ProfileScreen() {
           <ChevronRight size={20} color={colors.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]} onPress={() => router.push('/favorites')}>
-          <View style={styles.menuItemLeft}><Heart size={20} color={colors.icon} /><Text style={[styles.menuItemText, { color: colors.text }]}>{t('profile.favorites')}</Text></View>
+          <View style={styles.menuItemLeft}><Bookmark size={20} color={colors.icon} /><Text style={[styles.menuItemText, { color: colors.text }]}>{t('profile.favorites')}</Text></View>
           <ChevronRight size={20} color={colors.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]} onPress={toggleLanguage}>
           <View style={styles.menuItemLeft}><Globe size={20} color={colors.icon} /><Text style={[styles.menuItemText, { color: colors.text }]}>{t('profile.language')}</Text></View>
-          <View style={styles.langBadge}>
-            <Text style={styles.langBadgeText}>{locale.toUpperCase()}</Text>
-          </View>
+          <View style={styles.langBadge}><Text style={styles.langBadgeText}>{locale.toUpperCase()}</Text></View>
         </TouchableOpacity>
       </View>
 
-      {/* Кнопка для генерации тестовых данных */}
-      <TouchableOpacity 
-        style={[styles.seedButton, { backgroundColor: colorScheme === 'dark' ? '#1A3300' : '#F0FFF0', borderColor: '#34C759' }]} 
-        onPress={handleSeedData}
-        disabled={seeding}
-      >
-        {seeding ? (
-          <ActivityIndicator color="#34C759" />
-        ) : (
-          <>
-            <Database size={20} color="#34C759" />
-            <Text style={styles.seedText}>Сгенерировать тестовые товары</Text>
-          </>
-        )}
+      <TouchableOpacity style={[styles.seedButton, { backgroundColor: colorScheme === 'dark' ? '#1A3300' : '#F0FFF0', borderColor: '#34C759' }]} onPress={handleSeedData} disabled={seeding}>
+        {seeding ? <ActivityIndicator color="#34C759" /> : <><Database size={20} color="#34C759" /><Text style={styles.seedText}>Сгенерировать тестовые данные</Text></>}
       </TouchableOpacity>
 
       <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colorScheme === 'dark' ? '#330000' : '#FFF0F0' }]} onPress={signOut}>
@@ -288,8 +215,6 @@ const styles = StyleSheet.create({
   unauthSubtitle: { fontSize: 16, textAlign: 'center', marginBottom: 32, lineHeight: 22 },
   loginButton: { backgroundColor: '#FF5A00', paddingVertical: 16, paddingHorizontal: 32, borderRadius: 12, width: '100%', alignItems: 'center', marginBottom: 24 },
   loginButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  langToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 20, borderWidth: 1 },
-  langToggleText: { fontSize: 14, fontWeight: '600' },
   header: { flexDirection: 'row', alignItems: 'center', padding: 20, borderRadius: 16, marginBottom: 16 },
   avatarPlaceholder: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#FF5A00', alignItems: 'center', justifyContent: 'center', marginRight: 16 },
   avatarText: { color: '#fff', fontSize: 28, fontWeight: 'bold' },

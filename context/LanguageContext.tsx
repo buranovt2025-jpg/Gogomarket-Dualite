@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import i18n, { loadLanguage, setLanguage as setI18nLanguage } from '../lib/i18n';
+import AppLoading from '../components/AppLoading';
 
 type LanguageContextType = {
   locale: string;
@@ -27,7 +28,7 @@ export const LanguageProvider = ({ children }: { children: React.ReactNode }) =>
 
   const t = (key: string, options?: any) => i18n.t(key, options);
 
-  if (!isLoaded) return null;
+  if (!isLoaded) return <AppLoading />;
 
   return (
     <LanguageContext.Provider value={{ locale, changeLanguage, t }}>

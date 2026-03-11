@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '../lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
+import AppLoading from '../components/AppLoading';
 
 type Profile = {
   id: string;
@@ -25,31 +26,69 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [isAuthLoaded, setIsAuthLoaded] = useState(false);
 
   const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-      
-    if (data && !error) {
-      setProfile(data);
+    try {
+      let { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+        
+      if (error && error.code === 'PGRST116') {
+        const { data: userData } = await supabase.auth.getUser();
+        const { data: newProfile, error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            first_name: userData?.user?.user_metadata?.first_name || 'Тест',
+            last_name: userData?.user?.user_metadata?.last_name || 'Пользователь',
+            tier: 'buyer'
+          })
+          .select()
+          .single();
+
+        if (!insertError && newProfile) {
+          setProfile(newProfile);
+          return;
+        }
+      }
+
+      if (data && !error) {
+        setProfile(data);
+      } else if (!data) {
+        setProfile({ id: userId, first_name: 'Пользователь', last_name: '', tier: 'buyer', avatar_url: '', phone: '' });
+      }
+    } catch (e) {
+      console.error('Error in fetchProfile:', e);
     }
   };
 
   useEffect(() => {
-    // Получаем текущую сессию при загрузке
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-    });
+    let mounted = true;
 
-    // Подписываемся на изменения состояния авторизации
-    // Используем setTimeout для предотвращения deadlocks согласно правилам Supabase
+    const initAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+          }
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      } finally {
+        if (mounted) setIsAuthLoaded(true); // Гарантируем, что загрузка завершится
+      }
+    };
+
+    initAuth();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -63,7 +102,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }, 0);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
@@ -78,7 +120,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       refreshProfile: () => user ? fetchProfile(user.id) : Promise.resolve(), 
       signOut 
     }}>
-      {children}
+      {!isAuthLoaded ? <AppLoading /> : children}
     </AuthContext.Provider>
   );
 };

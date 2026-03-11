@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, FlatList, Dimensions, Image, TouchableOpacity, SafeAreaView, StatusBar, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, FlatList, Image, TouchableOpacity, SafeAreaView, StatusBar, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { Heart, MessageCircle, Share2, ShoppingBag } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-
-const { width, height: screenHeight } = Dimensions.get('window');
 
 export default function ReelsScreen() {
   const router = useRouter();
@@ -13,7 +11,12 @@ export default function ReelsScreen() {
   
   const [reels, setReels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Адаптивность
+  const { width, height: screenHeight } = useWindowDimensions();
+  const contentWidth = Math.min(width, 480); // Ограничиваем ширину рилса как у телефона
   const [containerHeight, setContainerHeight] = useState(screenHeight - 90);
+  
   const reelId = Array.isArray(initialReelId) ? initialReelId[0] : initialReelId;
 
   useEffect(() => {
@@ -43,7 +46,7 @@ export default function ReelsScreen() {
     const formatPrice = (price: number) => price ? price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " UZS" : '';
     
     return (
-      <View style={[styles.reelContainer, { height: containerHeight }]}>
+      <View style={[styles.reelContainer, { width: contentWidth, height: containerHeight }]}>
         <Image source={{ uri: item.video_url }} style={styles.videoBackground} resizeMode="cover" />
         <View style={styles.overlay} />
 
@@ -81,34 +84,38 @@ export default function ReelsScreen() {
   return (
     <View style={styles.container} onLayout={(e) => { if (e.nativeEvent.layout.height > 0) setContainerHeight(e.nativeEvent.layout.height); }}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
-      <SafeAreaView style={styles.topNavigation}>
-        <Text style={styles.topNavTextInactive}>Подписки</Text>
-        <Text style={styles.topNavTextActive}>Рекомендации</Text>
-      </SafeAreaView>
+      
+      <View style={[styles.responsiveWrapper, { width: contentWidth }]}>
+        <SafeAreaView style={styles.topNavigation}>
+          <Text style={styles.topNavTextInactive}>Подписки</Text>
+          <Text style={styles.topNavTextActive}>Рекомендации</Text>
+        </SafeAreaView>
 
-      <FlatList
-        ref={flatListRef}
-        data={reels}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        pagingEnabled
-        showsVerticalScrollIndicator={false}
-        snapToInterval={containerHeight}
-        snapToAlignment="start"
-        decelerationRate="fast"
-        getItemLayout={(data, index) => ({ length: containerHeight, offset: containerHeight * index, index })}
-        ListEmptyComponent={<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', height: containerHeight }}><Text style={{ color: '#fff' }}>Нет рилсов</Text></View>}
-      />
+        <FlatList
+          ref={flatListRef}
+          data={reels}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          pagingEnabled
+          showsVerticalScrollIndicator={false}
+          snapToInterval={containerHeight}
+          snapToAlignment="start"
+          decelerationRate="fast"
+          getItemLayout={(data, index) => ({ length: containerHeight, offset: containerHeight * index, index })}
+          ListEmptyComponent={<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', height: containerHeight }}><Text style={{ color: '#fff' }}>Нет рилсов</Text></View>}
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
+  responsiveWrapper: { flex: 1, alignSelf: 'center', backgroundColor: '#111' },
   topNavigation: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, flexDirection: 'row', justifyContent: 'center', gap: 20, paddingTop: 10 },
   topNavTextActive: { color: '#fff', fontSize: 16, fontWeight: 'bold', textShadowColor: 'rgba(0,0,0,0.75)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   topNavTextInactive: { color: 'rgba(255,255,255,0.6)', fontSize: 16, fontWeight: '600' },
-  reelContainer: { width: width, justifyContent: 'flex-end' },
+  reelContainer: { justifyContent: 'flex-end' },
   videoBackground: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', top: '50%' },
   rightActions: { position: 'absolute', right: 16, bottom: 100, alignItems: 'center', gap: 24, zIndex: 10 },

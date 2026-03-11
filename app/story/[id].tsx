@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Animated, SafeAreaView, StatusBar, PanResponder, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Animated, SafeAreaView, StatusBar, PanResponder, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { X, ChevronUp, ShoppingBag } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
-
-const { width } = Dimensions.get('window');
 
 export default function StoryScreen() {
   const { id } = useLocalSearchParams();
@@ -16,6 +14,10 @@ export default function StoryScreen() {
   
   const progress = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
+
+  // Адаптивность
+  const { width } = useWindowDimensions();
+  const contentWidth = Math.min(width, 480); // Как в Instagram Web
 
   useEffect(() => {
     const fetchStories = async () => {
@@ -84,55 +86,52 @@ export default function StoryScreen() {
   return (
     <Animated.View style={[styles.container, { transform: [{ translateY }] }]} {...panResponder.panHandlers}>
       <StatusBar hidden />
-      <Image source={{ uri: currentStory.image_url }} style={styles.image} resizeMode="cover" />
-      <View style={styles.topOverlay} />
-      <View style={styles.bottomOverlay} />
+      <View style={[styles.responsiveWrapper, { width: contentWidth }]}>
+        <Image source={{ uri: currentStory.image_url }} style={styles.image} resizeMode="cover" />
+        <View style={styles.topOverlay} />
+        <View style={styles.bottomOverlay} />
 
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.progressContainer}>
-          {stories.map((story, index) => (
-            <View key={story.id} style={styles.progressBarBackground}>
-              <Animated.View style={[styles.progressBarForeground, { width: index === currentIndex ? progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) : index < currentIndex ? '100%' : '0%' }]} />
-            </View>
-          ))}
-        </View>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.progressContainer}>
+            {stories.map((story, index) => (
+              <View key={story.id} style={styles.progressBarBackground}>
+                <Animated.View style={[styles.progressBarForeground, { width: index === currentIndex ? progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) : index < currentIndex ? '100%' : '0%' }]} />
+              </View>
+            ))}
+          </View>
 
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.userInfo} onPress={() => router.push(`/store/${currentStory.seller_id}`)}>
-            <Image source={{ uri: currentStory.profiles?.avatar_url || `https://placehold.co/100x100/FF5A00/FFF?text=${currentStory.profiles?.first_name?.[0] || 'U'}` }} style={styles.avatar} />
-            <View>
-              <Text style={styles.userName}>{currentStory.profiles?.first_name}</Text>
-              <Text style={styles.time}>Недавно</Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.closeBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/')}><X size={28} color="#fff" /></TouchableOpacity>
-        </View>
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.userInfo} onPress={() => router.push(`/store/${currentStory.seller_id}`)}>
+              <Image source={{ uri: currentStory.profiles?.avatar_url || `https://placehold.co/100x100/FF5A00/FFF?text=${currentStory.profiles?.first_name?.[0] || 'U'}` }} style={styles.avatar} />
+              <View>
+                <Text style={styles.userName}>{currentStory.profiles?.first_name}</Text>
+                <Text style={styles.time}>Недавно</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.closeBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/')}><X size={28} color="#fff" /></TouchableOpacity>
+          </View>
 
-        <TouchableOpacity style={styles.touchArea} activeOpacity={1} onPress={(e) => e.nativeEvent.locationX < width / 3 ? prevStory() : nextStory()} />
+          <TouchableOpacity style={styles.touchArea} activeOpacity={1} onPress={(e) => e.nativeEvent.locationX < contentWidth / 3 ? prevStory() : nextStory()} />
 
-        <View style={styles.footer}>
-          <Text style={styles.storyTitle}>{currentStory.title}</Text>
-          <TouchableOpacity style={styles.productButton} onPress={handleActionPress}>
-            {currentStory.product_id ? (
-              <>
-                <ShoppingBag size={20} color="#fff" />
-                <Text style={styles.productButtonText}>Смотреть товар</Text>
-              </>
-            ) : (
-              <>
-                <ChevronUp size={20} color="#fff" />
-                <Text style={styles.productButtonText}>Перейти в магазин</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+          <View style={styles.footer}>
+            <Text style={styles.storyTitle}>{currentStory.title}</Text>
+            <TouchableOpacity style={styles.productButton} onPress={handleActionPress}>
+              {currentStory.product_id ? (
+                <><ShoppingBag size={20} color="#fff" /><Text style={styles.productButtonText}>Смотреть товар</Text></>
+              ) : (
+                <><ChevronUp size={20} color="#fff" /><Text style={styles.productButtonText}>Перейти в магазин</Text></>
+              )}
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
+  responsiveWrapper: { flex: 1, alignSelf: 'center', backgroundColor: '#111', overflow: 'hidden' },
   image: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   topOverlay: { position: 'absolute', top: 0, left: 0, right: 0, height: 150, backgroundColor: 'rgba(0,0,0,0.4)' },
   bottomOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 200, backgroundColor: 'rgba(0,0,0,0.6)' },

@@ -10,17 +10,9 @@ export default function AddScreen() {
   const { profile, session } = useAuth();
 
   const checkAccessAndNavigate = (route: any) => {
-    if (!session) {
-      router.push('/(auth)/login');
-      return;
-    }
+    if (!session) { router.push('/(auth)/login'); return; }
     if (!profile || profile.tier === 'buyer') {
-      Toast.show({
-        type: 'error',
-        text1: 'Доступ закрыт',
-        text2: 'Сначала станьте продавцом в Профиле (это бесплатно)',
-        position: 'top'
-      });
+      Toast.show({ type: 'error', text1: 'Доступ закрыт', text2: 'Сначала станьте продавцом в Профиле' });
       router.push('/(tabs)/profile');
     } else {
       router.push(route);
@@ -29,54 +21,39 @@ export default function AddScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Создать</Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Что вы хотите опубликовать?</Text>
-        
-        {(!profile || profile.tier === 'buyer') && (
-          <View style={styles.warningBox}>
-            <AlertCircle size={20} color="#FF9500" />
-            <Text style={styles.warningText}>
-              Чтобы публиковать товары и рилсы, перейдите в профиль и станьте продавцом (это бесплатно).
-            </Text>
+      <View style={styles.responsiveWrapper}>
+        <View style={styles.header}><Text style={styles.headerTitle}>Создать</Text></View>
+        <ScrollView contentContainerStyle={styles.content}>
+          <Text style={styles.title}>Что вы хотите опубликовать?</Text>
+          {(!profile || profile.tier === 'buyer') && (
+            <View style={styles.warningBox}>
+              <AlertCircle size={20} color="#FF9500" />
+              <Text style={styles.warningText}>Чтобы публиковать товары и рилсы, перейдите в профиль и станьте продавцом.</Text>
+            </View>
+          )}
+          <View style={styles.optionsGrid}>
+            <TouchableOpacity style={styles.optionCard} onPress={() => checkAccessAndNavigate('/add-product')}>
+              <View style={[styles.iconContainer, { backgroundColor: '#FFF5F0' }]}><Package size={32} color="#FF5A00" /></View>
+              <View><Text style={styles.optionTitle}>Объявление</Text><Text style={styles.optionSubtitle}>Продать товар или услугу</Text></View>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.optionCard} onPress={() => checkAccessAndNavigate('/add-reel')}>
+              <View style={[styles.iconContainer, { backgroundColor: '#F0F5FF' }]}><Video size={32} color="#007AFF" /></View>
+              <View><Text style={styles.optionTitle}>Рилс</Text><Text style={styles.optionSubtitle}>Короткое видео о товаре</Text></View>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.optionCard} onPress={() => checkAccessAndNavigate('/add-story')}>
+              <View style={[styles.iconContainer, { backgroundColor: '#F5F0FF' }]}><Camera size={32} color="#AF52DE" /></View>
+              <View><Text style={styles.optionTitle}>История</Text><Text style={styles.optionSubtitle}>Фото или видео на 24 часа</Text></View>
+            </TouchableOpacity>
           </View>
-        )}
-
-        <View style={styles.optionsGrid}>
-          <TouchableOpacity style={styles.optionCard} onPress={() => checkAccessAndNavigate('/add-product')}>
-            <View style={[styles.iconContainer, { backgroundColor: '#FFF5F0' }]}>
-              <Package size={32} color="#FF5A00" />
-            </View>
-            <Text style={styles.optionTitle}>Объявление</Text>
-            <Text style={styles.optionSubtitle}>Продать товар или услугу</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.optionCard} onPress={() => checkAccessAndNavigate('/add-reel')}>
-            <View style={[styles.iconContainer, { backgroundColor: '#F0F5FF' }]}>
-              <Video size={32} color="#007AFF" />
-            </View>
-            <Text style={styles.optionTitle}>Рилс</Text>
-            <Text style={styles.optionSubtitle}>Короткое видео о товаре</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.optionCard} onPress={() => checkAccessAndNavigate('/add-story')}>
-            <View style={[styles.iconContainer, { backgroundColor: '#F5F0FF' }]}>
-              <Camera size={32} color="#AF52DE" />
-            </View>
-            <Text style={styles.optionTitle}>История</Text>
-            <Text style={styles.optionSubtitle}>Фото или видео на 24 часа</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
+  responsiveWrapper: { flex: 1, width: '100%', maxWidth: 800, alignSelf: 'center' },
   header: { paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F2F2F7' },
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1C1C1E' },
   content: { padding: 16 },

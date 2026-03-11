@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, Text, View, FlatList, RefreshControl, TouchableOpacity, Image, SafeAreaView, Dimensions, ScrollView, useColorScheme } from 'react-native';
+import { StyleSheet, Text, View, FlatList, RefreshControl, TouchableOpacity, Image, SafeAreaView, ScrollView, useColorScheme, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Search, Bookmark, Plus, ShoppingCart, Play } from 'lucide-react-native';
 import { useCart } from '../../context/CartContext';
 import Skeleton from '../../components/Skeleton';
 import { Colors } from '../../constants/Colors';
-
-const { width } = Dimensions.get('window');
-const EXPLORE_ITEM_SIZE = width / 3;
 
 const CATEGORIES = ['Все', 'Электроника', 'Одежда', 'Дом и сад', 'Авто', 'Услуги'];
 const LOGO_LIGHT = 'https://images.dualite.app/d5f3f285-d75c-4283-a4c0-6b6cacd910a4/asset-4166a9e1-b311-4a78-b40a-89462e577da5.webp';
@@ -20,14 +17,20 @@ export default function FeedScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Все');
+  
   const router = useRouter();
   const { items } = useCart();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
+  // Адаптивность
+  const { width } = useWindowDimensions();
+  const contentWidth = Math.min(width, 800); // Максимальная ширина контента
+  const numColumns = contentWidth >= 600 ? 5 : 3; // 5 колонок на планшете/ПК, 3 на телефоне
+  const EXPLORE_ITEM_SIZE = contentWidth / numColumns;
+
   const fetchFeed = async () => {
     try {
-      // 1. Загружаем активные истории
       const { data: dbStories } = await supabase
         .from('stories')
         .select('*, profiles(first_name, avatar_url)')
@@ -35,19 +38,16 @@ export default function FeedScreen() {
         .order('created_at', { ascending: false });
       setStories(dbStories || []);
 
-      // 2. Загружаем товары
       let query = supabase.from('products').select(`*, profiles (first_name, tier)`).eq('status', 'active').order('created_at', { ascending: false });
       if (activeCategory !== 'Все') query = query.eq('category', activeCategory);
       const { data: dbProducts } = await query;
       const formattedProducts = (dbProducts || []).map(p => ({ ...p, type: 'product' }));
       
-      // 3. Загружаем рилсы (только если выбрана категория "Все")
       let combined = [...formattedProducts];
       if (activeCategory === 'Все') {
         const { data: dbReels } = await supabase.from('reels').select('*, profiles(first_name, avatar_url)').order('created_at', { ascending: false });
         const formattedReels = (dbReels || []).map(r => ({ ...r, type: 'reel' }));
         
-        // Подмешиваем рилсы в ленту товаров (каждый 3-й элемент)
         formattedReels.forEach((reel, index) => {
           const insertPos = Math.min(combined.length, (index + 1) * 3);
           combined.splice(insertPos, 0, reel);
@@ -116,7 +116,7 @@ export default function FeedScreen() {
   const renderGridItem = ({ item }: { item: any }) => {
     if (item.type === 'reel') {
       return (
-        <TouchableOpacity style={[styles.gridItem, { borderColor: colors.background }]} onPress={() => router.push({ pathname: '/(tabs)/reels', params: { initialReelId: item.id } })} activeOpacity={0.9}>
+        <TouchableOpacity style={[styles.gridItem, { width: EXPLORE_ITEM_SIZE, height: EXPLORE_ITEM_SIZE, borderColor: colors.background }]} onPress={() => router.push({ pathname: '/(tabs)/reels', params: { initialReelId: item.id } })} activeOpacity={0.9}>
           <Image source={{ uri: item.video_url }} style={styles.gridImage} />
           <View style={styles.reelOverlay}><Play size={24} color="#fff" fill="#fff" /></View>
         </TouchableOpacity>
@@ -124,7 +124,7 @@ export default function FeedScreen() {
     }
     const imageUrl = item.images && item.images.length > 0 ? item.images[0] : 'https://placehold.co/400x400/E5E5EA/8E8E93.png?text=Нет+фото';
     return (
-      <TouchableOpacity style={[styles.gridItem, { borderColor: colors.background }]} onPress={() => router.push(`/product/${item.id}`)} activeOpacity={0.9}>
+      <TouchableOpacity style={[styles.gridItem, { width: EXPLORE_ITEM_SIZE, height: EXPLORE_ITEM_SIZE, borderColor: colors.background }]} onPress={() => router.push(`/product/${item.id}`)} activeOpacity={0.9}>
         <Image source={{ uri: imageUrl }} style={styles.gridImage} />
       </TouchableOpacity>
     );
@@ -132,18 +132,34 @@ export default function FeedScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#FF5A00' : colors.card }]}>
-      {renderTopHeader()}
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        {loading && !refreshing ? (
-          <View style={{ flex: 1 }}><ListHeader /><View style={styles.skeletonGrid}>{Array.from({ length: 12 }).map((_, i) => <View key={i} style={[styles.gridItem, { borderColor: colors.background }]}><Skeleton width="100%" height="100%" borderRadius={0} /></View>)}</View></View>
-        ) : (
-          <FlatList
-            data={feedItems} keyExtractor={(item) => item.id} renderItem={renderGridItem} numColumns={3}
-            contentContainerStyle={[styles.listContent, { backgroundColor: colors.background }]} ListHeaderComponent={ListHeader}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF5A00" />}
-            ListEmptyComponent={<View style={styles.emptyContainer}><Text style={[styles.emptyTitle, { color: colors.text }]}>Ничего не найдено</Text></View>}
-          />
-        )}
+      <View style={styles.responsiveWrapper}>
+        {renderTopHeader()}
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+          {loading && !refreshing ? (
+            <View style={{ flex: 1 }}>
+              <ListHeader />
+              <View style={styles.skeletonGrid}>
+                {Array.from({ length: 15 }).map((_, i) => (
+                  <View key={i} style={[styles.gridItem, { width: EXPLORE_ITEM_SIZE, height: EXPLORE_ITEM_SIZE, borderColor: colors.background }]}>
+                    <Skeleton width="100%" height="100%" borderRadius={0} />
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : (
+            <FlatList
+              key={numColumns} // Важно для перестроения сетки при ресайзе
+              data={feedItems} 
+              keyExtractor={(item) => item.id} 
+              renderItem={renderGridItem} 
+              numColumns={numColumns}
+              contentContainerStyle={[styles.listContent, { backgroundColor: colors.background }]} 
+              ListHeaderComponent={ListHeader}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF5A00" />}
+              ListEmptyComponent={<View style={styles.emptyContainer}><Text style={[styles.emptyTitle, { color: colors.text }]}>Ничего не найдено</Text></View>}
+            />
+          )}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -151,6 +167,7 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  responsiveWrapper: { flex: 1, width: '100%', maxWidth: 800, alignSelf: 'center' },
   topHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
   logoImage: { width: 140, height: 32 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -170,7 +187,7 @@ const styles = StyleSheet.create({
   storyAvatar: { width: '100%', height: '100%', borderRadius: 32, backgroundColor: '#E5E5EA' },
   storyName: { fontSize: 12, textAlign: 'center' },
   listContent: { paddingBottom: 30 },
-  gridItem: { width: EXPLORE_ITEM_SIZE, height: EXPLORE_ITEM_SIZE, borderWidth: 0.5 },
+  gridItem: { borderWidth: 0.5 },
   gridImage: { width: '100%', height: '100%', backgroundColor: '#E5E5EA' },
   reelOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center' },
   skeletonGrid: { flexDirection: 'row', flexWrap: 'wrap' },
